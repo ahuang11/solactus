@@ -1,0 +1,7 @@
+panel
+numpy
+pandas
+hvplot
+holoviews
+skyfield
+geopy
