@@ -103,12 +103,13 @@ def _show_sunset_hour(df, geoloc):
     return overlay
 
 
-def trigger(Location1, Location2):
-    return pn.Tabs(*[
-        pn.Pane(_show_sunset_hour(*_compute_loc_sunset(location)),
-                name=f'Location {i}')
-        for i, location in enumerate([Location1, Location2], 1)]
-    )
+def trigger(Location1=None, Location2=None):
+    if Location1 is not None:
+        return pn.Pane(_show_sunset_hour(*_compute_loc_sunset(Location1)),
+                       name=f'Location 1')
+    elif Location2 is not None:
+        return pn.Pane(_show_sunset_hour(*_compute_loc_sunset(Location2)),
+                       name=f'Location 2')
 
 title = pn.pane.HTML('<h2>Solactus Alpha</h2>')
 text = pn.pane.HTML('<h4>Input city, address, or coordinates.<br><br>'
@@ -121,14 +122,13 @@ text = pn.pane.HTML('<h4>Input city, address, or coordinates.<br><br>'
                     'Jupyter notebook for rapid development.'
                     '</h4>'
                     )
-layout = pn.interact(
-    trigger,
-    Location1='Champaign, IL',
-    Location2='Shanghai, China'
-)
+widget1 = pn.interact(trigger, Location1='Champaign, IL')
+widget2 = pn.interact(trigger, Location2='Shanghai, China')
+
 panel = pn.Column(title, text,
-                  pn.Row(layout[0][0],
-                         layout[0][1]),
-                  layout[1])
+                  pn.Row(widget1[0],
+                         widget2[0]),
+                  pn.Tabs(widget1[1],
+                          widget2[1]))
 
 panel.server_doc()
