@@ -123,8 +123,8 @@ text = pn.pane.HTML('<h4>Input city, address, or coordinates.<br><br>'
                     )
 layout = pn.interact(
     trigger,
-    Location_One='Champaign, IL',
-    Location_Two='Shanghai, China'
+    Location1='Champaign, IL',
+    Location2='Shanghai, China'
 )
 panel = pn.Column(title, text,
                   pn.Row(layout[0][0],
