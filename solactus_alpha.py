@@ -41,8 +41,11 @@ def _compute_loc_sunset(input_str):
     df['datetime'] = pd.to_datetime(df['datetime'])
     tz = GeoNames(username='zethiroth').reverse_timezone(
         (geoloc.latitude, geoloc.longitude))
-    df['datetime'] = df['datetime'].dt.tz_localize(
-        'utc').dt.tz_convert(tz.pytz_timezone)
+    try:
+        df['datetime'] = df['datetime'].dt.tz_localize(
+            'utc').dt.tz_convert(tz.pytz_timezone)
+    except TypeError:
+        df['datetime'] = df['datetime'].dt.tz_convert(tz.pytz_timezone)
     df['date'] = df['datetime'].dt.date
     df['time'] = df['datetime'].dt.time
     df['hour'] = (
@@ -103,13 +106,12 @@ def _show_sunset_hour(df, geoloc):
     return overlay
 
 
-def trigger(Location1=None, Location2=None):
-    if Location1 is not None:
-        return pn.Pane(_show_sunset_hour(*_compute_loc_sunset(Location1)),
-                       name=f'Location 1')
-    elif Location2 is not None:
-        return pn.Pane(_show_sunset_hour(*_compute_loc_sunset(Location2)),
-                       name=f'Location 2')
+def trigger(event):
+    progress_bar.active = True
+    index = 0 if '1' in event.obj.name else 1
+    panel[-1][index] = _show_sunset_hour(*_compute_loc_sunset(event.new))
+    progress_bar.active = False
+
 
 title = pn.pane.HTML('<h2>Solactus Alpha</h2>')
 text = pn.pane.HTML('<h4>Input city, address, or coordinates.<br><br>'
@@ -122,13 +124,26 @@ text = pn.pane.HTML('<h4>Input city, address, or coordinates.<br><br>'
                     'Jupyter notebook for rapid development.'
                     '</h4>'
                     )
-widget1 = pn.interact(trigger, Location1='Champaign, IL')
-widget2 = pn.interact(trigger, Location2='Shanghai, China')
+
+text_box1 = pn.widgets.TextInput(name='Location 1', value='Chicago',
+                                 sizing_mode='stretch_width')
+overlay1 = _show_sunset_hour(*_compute_loc_sunset(text_box1.value))
+_ = text_box1.param.watch(trigger, 'value')
+
+text_box2 = pn.widgets.TextInput(name='Location 2', value='Shanghai',
+                                 sizing_mode='stretch_width')
+overlay2 = _show_sunset_hour(*_compute_loc_sunset(text_box2.value))
+_ = text_box2.param.watch(trigger, 'value')
+
+progress_bar = pn.widgets.Progress(
+    sizing_mode='stretch_width', active=False, bar_color='secondary')
 
 panel = pn.Column(title, text,
-                  pn.Row(widget1[0],
-                         widget2[0]),
-                  pn.Tabs(widget1[1],
-                          widget2[1]))
+                  pn.Row(text_box1, text_box2),
+                  progress_bar,
+                  pn.layout.Divider(),
+                  pn.Tabs(('Location 1', overlay1),
+                          ('Location 2', overlay2))
+                  )
 
-panel.server_doc()
+panel.servable()
