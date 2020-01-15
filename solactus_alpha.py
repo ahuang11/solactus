@@ -79,28 +79,29 @@ def _show_sunset_hour(df, geoloc):
     lat, lon = geoloc.latitude, geoloc.longitude
     address = geoloc.address
     sunset_curve = sunset_df.hvplot('datetime', 'hour',
-                                    hover_cols=['daylight'])
+                                    hover_cols=['daylight'], responsive=True)
     sunset_curve = sunset_curve.opts(
         invert_yaxis=True, color='darkblue',
         xlabel='Date', ylabel='PM Hour of Sunset [Local Time]',
         title=f'Yearly Sunset Hour at {address} ({lat:.1f} N, {lon:.1f} E)',
         hooks=[_format_datetime_axis], show_grid=True,
         gridstyle={'ygrid_line_alpha': 0}, tools=[hover],
-        width=925, height=500, ylim=(4, 9)
+        ylim=(4, 9)
     )
 
     sun_up = hv.Area(df.loc[df['sun_down'] == False], 'datetime', 'hour')
-    sun_up = sun_up.opts(color='tan', alpha=0.15)
+    sun_up = sun_up.opts(color='tan', alpha=0.15, responsive=True)
 
     sun_down = hv.Area(sunset_df, 'datetime', ['hour', 'hour_24'])
-    sun_down = sun_down.opts(color='darkblue', alpha=0.15)
+    sun_down = sun_down.opts(color='darkblue', alpha=0.15, responsive=True)
 
     five_pm_line = hv.HLine(5).opts(color='black', alpha=0.1,
-                                     line_dash='dotted')
+                                     line_dash='dotted', responsive=True)
 
     five_pm_txt = hv.Text(pd.datetime(2020, 7, 4), 5, '5 PM')
     five_pm_txt = five_pm_txt.opts(text_font_size='1.5em', text_alpha=0.2,
-                                   text_baseline='bottom', text_align='left')
+                                   text_baseline='bottom', text_align='left',
+                                   responsive=True)
 
     overlay = (sunset_curve * sun_up * sun_down * five_pm_line * five_pm_txt)
     return overlay
@@ -108,22 +109,10 @@ def _show_sunset_hour(df, geoloc):
 
 def trigger(event):
     progress_bar.active = True
-    index = 0 if '1' in event.obj.name else 1
-    panel[-1][index] = _show_sunset_hour(*_compute_loc_sunset(event.new))
+    name = event.obj.name
+    index = 0 if '1' in name else 1
+    panel[-1][index] = (name, _show_sunset_hour(*_compute_loc_sunset(event.new)))
     progress_bar.active = False
-
-
-title = pn.pane.HTML('<h2>Solactus Alpha</h2>')
-text = pn.pane.HTML('<h4>Input city, address, or coordinates.<br><br>'
-                    'Created in Python with: '
-                    'numpy and pandas for wrangling data; '
-                    'geopy and skyfield for computing sunset '
-                    'times at input locations; '
-                    'holoviews, bokeh, hvplot, and panel '
-                    'for interactive plots; and '
-                    'Jupyter notebook for rapid development.'
-                    '</h4>'
-                    )
 
 text_box1 = pn.widgets.TextInput(name='Location 1', value='Chicago',
                                  sizing_mode='stretch_width')
@@ -138,12 +127,13 @@ _ = text_box2.param.watch(trigger, 'value')
 progress_bar = pn.widgets.Progress(
     sizing_mode='stretch_width', active=False, bar_color='secondary')
 
-panel = pn.Column(title, text,
-                  pn.Row(text_box1, text_box2),
+panel = pn.Column(pn.Row(text_box1, text_box2),
                   progress_bar,
                   pn.layout.Divider(),
                   pn.Tabs(('Location 1', overlay1),
-                          ('Location 2', overlay2))
+                          ('Location 2', overlay2),
+                          sizing_mode='stretch_both'),
+                  sizing_mode='stretch_width'
                   )
 
-panel.servable()
+panel.servable(title='Solactus')
